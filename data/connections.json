@@ -1,0 +1,32 @@
+[
+  {
+    "platform": "ThingsCloud",
+    "connection": {
+      "http_access_point": "http://bj-3-api.iot-api.com",
+      "access_token": "95locjtijh0hza3y",
+      "project_key": "cjedVy0IOR"
+    }
+  },
+  {
+    "platform": "TLink",
+    "connection": {
+      "http_access_point": "http://api.tlink.io/api/device/sendDataPoint",
+      "user_id": "200080677",
+      "device_no": "0U13X169ZX6JMVH4",
+      "sensor_no": {
+        "温度传感器": "200636116",
+        "湿度传感器": "200636117"
+      }
+    }
+  },
+  {
+    "platform": "AliYun",
+    "connection": {
+      "host_name": "cn-shanghai",
+      "product_key": "hlbjpeerN9E",
+      "device_name": "dev0",
+      "device_secret": "515de0553303fc45ca37b77a179fc7ca",
+      "up_raw_topic": "/sys/hlbjpeerN9E/${deviceName}/thing/model/up_raw"
+    }
+  }
+]
