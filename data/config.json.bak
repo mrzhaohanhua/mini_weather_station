@@ -1,0 +1,4 @@
+{
+    "sensor_interval": 600,
+    "controller_interval":60
+}

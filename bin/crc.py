@@ -19,7 +19,8 @@ def get_modbus_crc(data: list, reverse: bool = True) -> list:
     :return: crc数值列表
     """
     data_bytes = bytes(data)  # 将数据列表转为bytes
-    modbus_crc_func = crcmod.predefined.mkPredefinedCrcFun('modbus')  # 调用crcmod中的函数进行计算
+    modbus_crc_func = crcmod.predefined.mkPredefinedCrcFun(
+        'modbus')  # 调用crcmod中的函数进行计算
     crc_value = modbus_crc_func(data_bytes)
     if reverse:
         # 低位在前，高位在后

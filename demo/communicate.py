@@ -1,7 +1,7 @@
 import json
 
 
-def byte_to_int(data: list) -> int | None:
+def byte_to_int(data: list) -> int:
     if len(data) == 2:
         return data[0] * 0x100 + data[1]
     elif len(data) == 4:
