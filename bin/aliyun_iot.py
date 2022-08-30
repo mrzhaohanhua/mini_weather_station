@@ -1,7 +1,9 @@
+import logging
 from linkkit import linkkit
 import threading
 import json
 import sys
+import time
 
 
 class AliThing(object):
@@ -37,60 +39,60 @@ class AliThing(object):
 
     def on_device_dynamic_register(self, rc, value, userdata):
         if rc == 0:
-            print("dynamic register device success, value:" + value)
+            logging.debug("dynamic register device success, value:" + value)
         else:
-            print("dynamic register device fail, message:" + value)
+            logging.debug("dynamic register device fail, message:" + value)
 
     def on_connect(self, session_flag, rc, userdata):
-        print("on_connect:%d,rc:%d,userdata:" % (session_flag, rc))
+        logging.debug("on_connect:%d,rc:%d,userdata:" % (session_flag, rc))
 
     def on_disconnect(self, rc, userdata):
-        print("on_disconnect:rc:%d,userdata:" % rc)
+        logging.debug("on_disconnect:rc:%d,userdata:" % rc)
 
     def on_topic_message(self, topic, payload, qos, userdata):
-        print("on_topic_message:" + topic + " payload:" +
-              str(payload) + " qos:" + str(qos))
+        logging.debug("on_topic_message:" + topic + " payload:" +
+                      str(payload) + " qos:" + str(qos))
         pass
 
     def on_subscribe_topic(self, mid, granted_qos, userdata):
-        print("on_subscribe_topic mid:%d, granted_qos:%s" %
-              (mid, str(','.join('%s' % it for it in granted_qos))))
+        logging.debug("on_subscribe_topic mid:%d, granted_qos:%s" %
+                      (mid, str(','.join('%s' % it for it in granted_qos))))
         pass
 
     def on_unsubscribe_topic(self, mid, userdata):
-        print("on_unsubscribe_topic mid:%d" % mid)
+        logging.debug("on_unsubscribe_topic mid:%d" % mid)
         pass
 
     def on_publish_topic(self, mid, userdata):
-        print("on_publish_topic mid:%d" % mid)
+        logging.debug("on_publish_topic mid:%d" % mid)
 
     def on_thing_prop_changed(self, params, userdata):
-        print("on_thing_prop_changed params:" + str(params))
+        logging.debug("on_thing_prop_changed params:" + str(params))
 
     def on_thing_enable(self, userdata):
-        print("on_thing_enable")
+        logging.debug("on_thing_enable")
 
     def on_thing_disable(self, userdata):
-        print("on_thing_disable")
+        logging.debug("on_thing_disable")
 
     def on_thing_event_post(self, event, request_id, code, data, message, userdata):
-        print("on_thing_event_post event:%s,request id:%s, code:%d, data:%s, message:%s" %
-              (event, request_id, code, str(data), message))
+        logging.debug("on_thing_event_post event:%s,request id:%s, code:%d, data:%s, message:%s" %
+                      (event, request_id, code, str(data), message))
         pass
 
     def on_thing_prop_post(self, request_id, code, data, message, userdata):
-        print("on_thing_prop_post request id:%s, code:%d, data:%s message:%s" %
-              (request_id, code, str(data), message))
+        logging.debug("on_thing_prop_post request id:%s, code:%d, data:%s message:%s" %
+                      (request_id, code, str(data), message))
 
     def on_thing_raw_data_arrived(self, payload, userdata):
-        print("on_thing_raw_data_arrived:%s" % str(payload))
+        logging.debug("on_thing_raw_data_arrived:%s" % str(payload))
 
     def on_thing_raw_data_post(self, payload, userdata):
-        print("on_thing_raw_data_post: %s" % str(payload))
+        logging.debug("on_thing_raw_data_post: %s" % str(payload))
 
     def on_thing_call_service(self, identifier, request_id, params, userdata):
-        print("on_thing_call_service identifier:%s, request id:%s, params:%s" %
-              (identifier, request_id, params))
+        logging.debug("on_thing_call_service identifier:%s, request id:%s, params:%s" %
+                      (identifier, request_id, params))
         self.__call_service_request_id = request_id
         pass
 
@@ -110,10 +112,11 @@ class AliThing(object):
         global link_disconnect
         link_disconnect = False
         while True:
+            time.sleep(1)
             if link_disconnect:
                 sys.exit()
             if post_property_buff != None:
-                print(f"post_prompty_buff : {post_property_buff}")
+                logging.debug(f"Post data {post_property_buff}")
                 self.__linkkit.thing_post_property(post_property_buff)
                 post_property_buff = None
 
@@ -123,10 +126,13 @@ def load_ali_thing() -> AliThing:
     global ali_thing
     ali_thing_config = {}
     ali_thing_config_file_name = "./data/ali_thing_config.json"
+    logging.debug(f"Load AliThing config file '{ali_thing_config_file_name}'")
     try:
         with open(ali_thing_config_file_name, 'r', encoding='UTF-8') as ali_thing_config_file:
             ali_thing_config = json.load(ali_thing_config_file)  # json文件转字典
-    except:
+    except FileNotFoundError:
+        logging.warning(
+            f"AliThing config file '{ali_thing_config_file_name} not found.'")
         pass
 
     host_name = ali_thing_config.get("host_name", "")
@@ -135,15 +141,26 @@ def load_ali_thing() -> AliThing:
     device_secret = ali_thing_config.get("device_secret", "")
 
     if host_name == "":
+        logging.debug(f"host_name is empty.")
         host_name = input("输入 host_name : [cn-shanghai] ")
         if host_name == "":
             host_name = "cn-shanghai"
+        logging.debug(f"host_name set to '{host_name}'.")
+
     while product_key == "":
+        logging.debug(f"product_key is empty.")
         product_key = input("输入 ProductKey : ")
+        logging.debug(f"product_key set to '{product_key}'.")
+
     while device_name == "":
+        logging.debug(f"device_name is empty.")
         device_name = input("输入 device_name : ")
+        logging.debug(f"device_name set to '{device_name}'.")
+
     while device_secret == "":
+        logging.debug(f"device_secret is empty.")
         device_secret = input("输入 device_secret : ")
+        logging.debug(f"device_secret set to '{device_secret}'.")
 
     new_ali_thing_config = {
         "host_name": host_name,
@@ -152,11 +169,15 @@ def load_ali_thing() -> AliThing:
         "device_secret": device_secret
     }
     if new_ali_thing_config != ali_thing_config or ali_thing_config == {}:
+        logging.debug(
+            f"AliThing config has been changed. Writing to '{ali_thing_config_file}'")
         try:
             with open(ali_thing_config_file_name, 'w', encoding='UTF-8') as ali_thing_config_file:
                 json.dump(new_ali_thing_config,
                           ali_thing_config_file, indent=2)
         except:
+            logging.warning(
+                f"AliThing config file '{ali_thing_config_file}' write fail.")
             pass
 
     return AliThing(product_key, device_name, device_secret, host_name)
