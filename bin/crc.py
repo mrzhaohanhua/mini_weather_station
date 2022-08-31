@@ -30,12 +30,15 @@ def get_modbus_crc(data: list, reverse: bool = True) -> list:
         return [int(crc_value / 0x100), crc_value % 0x100]
 
 
-def crc_check(data: list) -> bool:
+def crc_check(data: list, crc_reverse: bool = True) -> bool:
     """
     检查数据最后2字节是否为前序数据的crc校验码
     :param data: 要娇艳的数据列表
     :return: 返回true 或者 false
     """
+    list1=data[-2:]
+    list2=data[:-2]
+    list2_crc=get_modbus_crc(list2)
     return data[-2:] == get_modbus_crc(data[:-2])
 
 
