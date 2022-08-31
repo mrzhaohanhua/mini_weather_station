@@ -1,0 +1,31 @@
+{
+    "version": 1,
+    "formatters": {
+        "default": {
+            "format": "[%(levelname)s]\t%(asctime)s\t%(message)s"
+        }
+    },
+    "handlers": {
+        "console_debug_handler": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "default"
+        },
+        "file_info_handler": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG",
+            "filename": "./log/mini_weather_station.log",
+            "formatter": "default"
+        }
+    },
+    "loggers": {
+        "": {
+            "handlers": [
+                "console_debug_handler",
+                "file_info_handler"
+            ],
+            "level": "DEBUG",
+            "propagate": false
+        }
+    }
+}
