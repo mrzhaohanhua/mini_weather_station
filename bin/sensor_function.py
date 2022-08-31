@@ -4,6 +4,11 @@ import serial
 import serial.tools.list_ports
 from main import set_logging
 
+BAUD_RATE=9600
+BYTE_SIZE=8
+PARITY=serial.PARITY_NONE
+STOP_BIT=serial.STOPBITS_ONE
+
 
 def get_port_list() -> list:
     # 返回当前系统串口列表
