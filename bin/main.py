@@ -4,7 +4,7 @@ import json
 import time
 import logging
 import logging.config
-import sensor_function
+# import sensor_function
 
 
 def set_logging():
