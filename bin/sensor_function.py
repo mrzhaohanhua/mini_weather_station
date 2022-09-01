@@ -49,7 +49,7 @@ def send_command(port: str, dev_addr: int, command_code: int, addr: list, length
     command_list.append(dev_addr)  # 设备地址
     command_list.append(command_code)  # 指令代码
     command_list = command_list+addr  # 寄存器地址
-    command_list = command_list+number_to_list(length, 2)  # 需要的数据长度
+    command_list = command_list+number_to_byteslist(length, 2)  # 需要的数据长度
     command_list = crc.append_crc(command_list)  # 奇偶校验
     ser.flushInput()
     ser.flushOutput()
@@ -76,7 +76,7 @@ def get_system_temperature() -> float:
     return int(os.popen("cat /sys/class/thermal/thermal_zone0/temp").read())/1000
 
 
-def number_to_list(number: int, len: int) -> list:
+def number_to_byteslist(number: int, len: int) -> list:
     # 数字转为指定位数的字节列表
     if len == 1:
         if number < 256:
@@ -92,6 +92,14 @@ def number_to_list(number: int, len: int) -> list:
         return []
 
 
+def byteslist_to_number(bytes_list: list) -> int:
+    # 2或者4字节数据转为整数
+    if len(bytes_list) == 2:
+        return bytes_list[0]*0x100+bytes_list[1]
+    elif len(bytes_list) == 4:
+        return bytes_list[0]*0x1000000 + bytes_list[1]*0x10000 + bytes_list[2]*0x100 + bytes_list[3]
+
+
 def byteslist_to_stringlist(bl: bytes) -> list:
     # 字节列表转为Hex字符串列表
     number_list = list(bl)
@@ -100,6 +108,27 @@ def byteslist_to_stringlist(bl: bytes) -> list:
         str = '0x{:02X}'.format(n)
         string_list.append(str)
     return string_list
+
+
+def get_controller_data(data_list) -> dict:
+    # 将bytes list 转为控制器数据字典
+    if len(data_list) != 63:
+        logging.warning("传递的controller数据字节列表不合法.")
+        return {}
+    data_frame_dict = {}
+    for offset in range(29):
+        data_frame_dict['0x{:02X}'.format(
+            0x1000+offset)] = byteslist_to_number(data_list[3+offset*2:3+offset*2+2])
+    data_dict = {}
+    data_dict["controller_soft_ver"] = data_frame_dict.get("0x1000", "")
+    data_dict["controller_panel_volt"] = data_frame_dict.get("0x1001", 0)*0.1
+    data_dict["controller_batt_volt"] = data_frame_dict.get("0x1002", 0)*0.1
+    data_dict["controller_charge_curr"] = data_frame_dict.get("0x1005", 0)*0.1
+    data_dict["controller_charge_temp"] = data_frame_dict.get("0x1006",0)
+    data_dict["controller_charge_power"]=data_frame_dict.get("0x1007",0)*0.1
+    data_dict["controller_load_power"]=data_frame_dict.get("0x1008",0)*0.1
+    data_dict["controller_batt"]=data_frame_dict.get("0x1009",0)
+    return data_dict
 
 
 def search_device(command_code: int, addr: list, dev_addr=-1) -> dict:
@@ -118,7 +147,7 @@ def search_device(command_code: int, addr: list, dev_addr=-1) -> dict:
                 else:
                     dev_addr_list = [dev_addr]
                 for dev_addr in dev_addr_list:
-                    for i in range(1,retry_times):                      
+                    for i in range(1, retry_times):
                         receive = send_command(
                             port, dev_addr, command_code, addr, 1, DEFAULT_DATA_UNIT, b_rate, 1)
                         if len(receive) > 0:
@@ -155,7 +184,9 @@ def serial_demo():
 
 if __name__ == "__main__":
     set_logging()
-    # send_command('/dev/ttyUSB0', 0x6, GET_CONTROLLER_DATA_COMMAND,
-    #  [0x10, 0x00], 29)
-    search_device(0x04, [0x10, 0x00])
+    recived_data = send_command('/dev/ttyUSB0', 0x6, GET_CONTROLLER_DATA_COMMAND,
+                                [0x10, 0x00], 29)
+    # search_device(0x04, [0x10, 0x00])
+    dict = get_controller_data(recived_data)
+
     pass
