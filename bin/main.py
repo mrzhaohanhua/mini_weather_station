@@ -1,8 +1,10 @@
+import sys
 import aliyun_iot
 import json
 import time
 import logging
 import logging.config
+import sensor_function
 
 
 def set_logging():
@@ -62,7 +64,7 @@ def load_config():
             pass
 
 
-def main():
+def main(argv):
     set_logging()
     # 配置参数
     sensor_interval: int  # 传感器读取时间间隔,秒
@@ -70,15 +72,21 @@ def main():
     load_config()
     ali_thing = aliyun_iot.load_ali_thing()  # 加载阿里云设备模型
 
-    temp = 0
-    humi = 0
-    while True:
-        time.sleep(2)
-        ali_thing.set_property(
-            {"sensor_temperature": temp, "sensor_humidity": humi})
-        temp = temp+1
-        humi = humi+1
+    # temp = 0
+    # humi = 0
+    # while True:
+    #     time.sleep(2)
+    #     ali_thing.set_property(
+    #         {"sensor_temperature": temp, "sensor_humidity": humi})
+    #     temp = temp+1
+    #     humi = humi+1
+
+    if len(argv) > 0:
+        if argv[0] == 'scan':
+            sensor_function.search_device(0x04, [0x10, 0x00])
+            sys.exit()
+    pass
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

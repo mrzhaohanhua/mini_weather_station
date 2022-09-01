@@ -1,4 +1,12 @@
-{
-  "mppt": "",
-  "temperature_sensor": ""
-}
+[
+  {
+    "device_name":"controller",
+    "serial_port":"",
+    "device_addr":-1
+  },
+  {
+    "device_name":"sensor",
+    "serial_port":"",
+    "device_addr":""
+  }
+]

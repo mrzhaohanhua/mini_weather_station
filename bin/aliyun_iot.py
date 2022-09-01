@@ -35,6 +35,7 @@ class AliThing(object):
         self.__linkkit.on_thing_raw_data_arrived = self.on_thing_raw_data_arrived
         self.__call_service_request_id = 0
         loop_thread = threading.Thread(target=self.start_loop)
+        loop_thread.setDaemon(True)
         loop_thread.start()
 
     def on_device_dynamic_register(self, rc, value, userdata):
