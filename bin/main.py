@@ -4,7 +4,8 @@ import json
 import time
 import logging
 import logging.config
-# import sensor_function
+import sensor_module
+from sensor_module import send_command, get_controller_data, GET_CONTROLLER_DATA_COMMAND,
 
 
 def set_logging():
@@ -70,8 +71,9 @@ def main(argv):
     sensor_interval: int  # 传感器读取时间间隔,秒
     controller_interval: int  # 控制器读取时间间隔,秒
     load_config()
+    # 重置buffer
+    aliyun_iot.__init()
     ali_thing = aliyun_iot.load_ali_thing()  # 加载阿里云设备模型
-
     # temp = 0
     # humi = 0
     # while True:
@@ -81,11 +83,12 @@ def main(argv):
     #     temp = temp+1
     #     humi = humi+1
 
-    if len(argv) > 0:
-        if argv[0] == 'scan':
-            sensor_function.search_device(0x04, [0x10, 0x00])
-            sys.exit()
-    pass
+    recived_data = sensor_module.send_command(
+        '/dev/ttyUSB0', 0x6, sensor_module.GET_CONTROLLER_DATA_COMMAND, [0x10, 0x00], 29)
+    # search_device(0x04, [0x10, 0x00])
+    property_upload_buffer = get_controller_data(recived_data)
+    while True:
+        time.sleep(1)
 
 
 if __name__ == "__main__":

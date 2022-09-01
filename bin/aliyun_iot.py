@@ -6,12 +6,20 @@ import sys
 import time
 
 
+def __init():
+    global property_upload_buffer
+    global property_upload_on_duty
+    property_upload_buffer = {}
+    property_upload_on_duty = False
+
+
 class AliThing(object):
     """
     阿里Iot设备类
     """
 
     def __init__(self,  product_key, device_name, device_secret, host_name="cn-shanghai"):
+
         self.__linkkit = linkkit.LinkKit(  # 连接参数
             host_name=host_name,
             product_key=product_key,
@@ -79,11 +87,13 @@ class AliThing(object):
     def on_thing_event_post(self, event, request_id, code, data, message, userdata):
         logging.debug("on_thing_event_post event:%s,request id:%s, code:%d, data:%s, message:%s" %
                       (event, request_id, code, str(data), message))
-        pass
 
     def on_thing_prop_post(self, request_id, code, data, message, userdata):
+
         logging.debug("on_thing_prop_post request id:%s, code:%d, data:%s message:%s" %
                       (request_id, code, str(data), message))
+        property_upload_on_duty = False
+        property_upload_buffer = {}
 
     def on_thing_raw_data_arrived(self, payload, userdata):
         logging.debug("on_thing_raw_data_arrived:%s" % str(payload))
@@ -97,9 +107,9 @@ class AliThing(object):
         self.__call_service_request_id = request_id
         pass
 
-    def set_property(self, property_data: dict):
-        global post_property_buff
-        post_property_buff = property_data
+    # def set_property(self, property_data: dict):
+    #     global post_property_buff
+    #     post_property_buff = property_data
 
     def start_loop(self):
         self.__linkkit.connect_async()
@@ -108,18 +118,17 @@ class AliThing(object):
                 break
             elif self.__linkkit.check_state() == linkkit.LinkKit.LinkKitState.DISCONNECTED:
                 sys.exit()
-        global post_property_buff
-        post_property_buff = None
         global link_disconnect
         link_disconnect = False
         while True:
             time.sleep(1)
             if link_disconnect:
                 sys.exit()
-            if post_property_buff != None:
-                logging.debug(f"Post data {post_property_buff}")
-                self.__linkkit.thing_post_property(post_property_buff)
-                post_property_buff = None
+            if property_upload_buffer != {}:
+                # buffer中有数据，开始上传
+                property_upload_on_duty = True
+                logging.debug(f"Post data {property_upload_buffer}")
+                self.__linkkit.thing_post_property(property_upload_buffer)
 
 
 def load_ali_thing() -> AliThing:

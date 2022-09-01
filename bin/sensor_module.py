@@ -5,7 +5,6 @@ import logging
 import serial
 import serial.tools.list_ports
 import crc
-from main import set_logging
 
 BAUD_RATE_LIST = [9600, 19200]
 BAUD_RATE = 9600  # 串口速率
@@ -183,7 +182,6 @@ def serial_demo():
 
 
 if __name__ == "__main__":
-    set_logging()
     recived_data = send_command('/dev/ttyUSB0', 0x6, GET_CONTROLLER_DATA_COMMAND,
                                 [0x10, 0x00], 29)
     # search_device(0x04, [0x10, 0x00])
