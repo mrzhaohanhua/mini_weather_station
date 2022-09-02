@@ -1,0 +1,5 @@
+{
+    "device_name":"controller",
+    "serial_port":"/dev/ttyUSB0",
+    "device_addr":6
+  }

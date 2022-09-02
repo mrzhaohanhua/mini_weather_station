@@ -1,16 +1,9 @@
-import logging
 from linkkit import linkkit
+import logging
 import threading
 import json
 import sys
 import time
-
-
-def __init():
-    global property_upload_buffer
-    global property_upload_on_duty
-    property_upload_buffer = {}
-    property_upload_on_duty = False
 
 
 class AliThing(object):
@@ -19,7 +12,10 @@ class AliThing(object):
     """
 
     def __init__(self,  product_key, device_name, device_secret, host_name="cn-shanghai"):
-
+        global property_upload_on_duty
+        global property_upload_buffer
+        property_upload_on_duty = False
+        property_upload_buffer = {}
         self.__linkkit = linkkit.LinkKit(  # 连接参数
             host_name=host_name,
             product_key=product_key,
@@ -89,6 +85,8 @@ class AliThing(object):
                       (event, request_id, code, str(data), message))
 
     def on_thing_prop_post(self, request_id, code, data, message, userdata):
+        global property_upload_on_duty
+        global property_upload_buffer
 
         logging.debug("on_thing_prop_post request id:%s, code:%d, data:%s message:%s" %
                       (request_id, code, str(data), message))
@@ -105,20 +103,41 @@ class AliThing(object):
         logging.debug("on_thing_call_service identifier:%s, request id:%s, params:%s" %
                       (identifier, request_id, params))
         self.__call_service_request_id = request_id
-        pass
+
+    def post_property(self, property_dict: dict) -> bool:
+        # 设置属性
+        global property_upload_on_duty
+        global property_upload_buffer
+        retry_times = 0
+        max_retry_times = 3
+        while True:
+            if property_upload_on_duty:
+                if retry_times > max_retry_times:
+                    logging.warning(
+                        f"max retry times {max_retry_times} reached, property dict will drop.")
+                    break
+                logging.info("previous upload session is processing.")
+                time.sleep(1)
+                retry_times += 1
+            else:#property_upload_on_duty为False
+                property_upload_buffer.update(property_dict) #向buffer中增加数值
+                break
 
     # def set_property(self, property_data: dict):
     #     global post_property_buff
     #     post_property_buff = property_data
 
     def start_loop(self):
+        global link_disconnect
+        global property_upload_on_duty
+        global property_upload_buffer
+
         self.__linkkit.connect_async()
         while True:
             if self.__linkkit.check_state() == linkkit.LinkKit.LinkKitState.CONNECTED:
                 break
             elif self.__linkkit.check_state() == linkkit.LinkKit.LinkKitState.DISCONNECTED:
                 sys.exit()
-        global link_disconnect
         link_disconnect = False
         while True:
             time.sleep(1)
@@ -142,8 +161,7 @@ def load_ali_thing() -> AliThing:
             ali_thing_config = json.load(ali_thing_config_file)  # json文件转字典
     except FileNotFoundError:
         logging.warning(
-            f"AliThing config file '{ali_thing_config_file_name} not found.'")
-        pass
+            f"AliThing config file '{ali_thing_config_file_name}' not found.")
 
     host_name = ali_thing_config.get("host_name", "")
     product_key = ali_thing_config.get("product_key", "")

@@ -1,10 +1,15 @@
 from audioop import add
+import sys
 import os
+import json
 import time
 import logging
 import serial
 import serial.tools.list_ports
 import crc
+import threading
+import aliyun_iot
+
 
 BAUD_RATE_LIST = [9600, 19200]
 BAUD_RATE = 9600  # 串口速率
@@ -18,8 +23,41 @@ WRITE_TIMEOUT = 5  # 数据写入超时
 GET_CONTROLLER_DATA_COMMAND = 0x04      # 读取控制器运行数据的指令
 GET_CONTROLLER_CONFIG_COMMAND = 0x03    # 读取控制器设置的指令
 SET_CONTROLLER_CONFIG_COMMAND = 0x06    # 写入控制器设置的指令
-
+GET_SENSOR_DATA_COMMAND = 0x03
+SET_SENSOR_CONFIG_COMMAND = 0x06
 DEFAULT_DATA_UNIT = 16  # 寄存器大小 bit
+
+
+def load_controller_config() -> bool:
+    # 读取串口配置文件
+    global controller_config
+    controller_config = {}
+    controller_config_file_name = "./data/controller_config.json"
+    try:
+        logging.debug(
+            f"load controller config file '{controller_config_file_name}'")
+        with open(controller_config_file_name, 'r', encoding='UTF-8') as controller_config_file:
+            controller_config = json.load(controller_config_file)
+    except FileNotFoundError:
+        logging.error(
+            f"controller config file '{controller_config_file_name}' not found.")
+        return False
+    # 验证配置有效性
+    for n in range(3):
+        response = send_command(
+            controller_config.get("serial_port", ""),
+            controller_config.get("device_addr", -1),
+            GET_CONTROLLER_DATA_COMMAND,
+            [0x10, 0x00],
+            1,
+            DEFAULT_DATA_UNIT)
+        if len(response) > 0:
+            logging.debug(f"controller config file checked.")
+            return True
+        time.sleep(1)
+    logging.error(
+        f"controller config file '{controller_config_file_name}' is not valid.")
+    return False
 
 
 def get_port_list() -> list:
@@ -33,17 +71,23 @@ def get_port_list() -> list:
 
 
 def send_command(port: str, dev_addr: int, command_code: int, addr: list, length: int, data_unit=DEFAULT_DATA_UNIT, baud_rate=BAUD_RATE, time_out=TIMEOUT) -> list:
+    # 发送指令，并接收返回的数据
     command_list = []
-    ser = serial.Serial(
-        port=port,
-        baudrate=baud_rate,
-        bytesize=BYTE_SIZE,
-        parity=PARITY,
-        stopbits=STOP_BIT,
-        timeout=time_out,
-        write_timeout=WRITE_TIMEOUT)
-    logging.debug(
-        f"'{port}' open: baudrate:{baud_rate}, address:{byteslist_to_stringlist(addr)}")
+    try:
+        ser = serial.Serial(
+            port=port,
+            baudrate=baud_rate,
+            bytesize=BYTE_SIZE,
+            parity=PARITY,
+            stopbits=STOP_BIT,
+            timeout=time_out,
+            write_timeout=WRITE_TIMEOUT)
+        logging.debug(
+            f"'{port}' open: baudrate:{baud_rate}, address:{byteslist_to_stringlist(addr)}")
+    except:
+        logging.error(f"'{port}' open fail")
+        return []
+
     # 开始组合命令
     command_list.append(dev_addr)  # 设备地址
     command_list.append(command_code)  # 指令代码
@@ -109,24 +153,36 @@ def byteslist_to_stringlist(bl: bytes) -> list:
     return string_list
 
 
-def get_controller_data(data_list) -> dict:
+def get_controller_data() -> dict:
+    port = controller_config.get("serial_port", "")
+    dev_addr = controller_config.get("device_addr", -1)
+    for n in range(3):
+        recived_data = send_command(
+            port, dev_addr, GET_CONTROLLER_DATA_COMMAND, [0x10, 0x00], 29)
+        if len(recived_data) > 0:
+            break
+        time.sleep(1)
+    if len(recived_data) == 0:
+        return {}
+
     # 将bytes list 转为控制器数据字典
-    if len(data_list) != 63:
+    if len(recived_data) != 63:
         logging.warning("传递的controller数据字节列表不合法.")
         return {}
     data_frame_dict = {}
     for offset in range(29):
         data_frame_dict['0x{:02X}'.format(
-            0x1000+offset)] = byteslist_to_number(data_list[3+offset*2:3+offset*2+2])
+            0x1000+offset)] = byteslist_to_number(recived_data[3+offset*2:3+offset*2+2])
     data_dict = {}
     data_dict["controller_soft_ver"] = data_frame_dict.get("0x1000", "")
     data_dict["controller_panel_volt"] = data_frame_dict.get("0x1001", 0)*0.1
     data_dict["controller_batt_volt"] = data_frame_dict.get("0x1002", 0)*0.1
     data_dict["controller_charge_curr"] = data_frame_dict.get("0x1005", 0)*0.1
-    data_dict["controller_charge_temp"] = data_frame_dict.get("0x1006",0)
-    data_dict["controller_charge_power"]=data_frame_dict.get("0x1007",0)*0.1
-    data_dict["controller_load_power"]=data_frame_dict.get("0x1008",0)*0.1
-    data_dict["controller_batt"]=data_frame_dict.get("0x1009",0)
+    data_dict["controller_charge_temp"] = data_frame_dict.get("0x1006", 0)
+    data_dict["controller_charge_power"] = data_frame_dict.get("0x1007", 0)*0.1
+    data_dict["controller_load_power"] = data_frame_dict.get("0x1008", 0)*0.1
+    data_dict["controller_batt"] = data_frame_dict.get("0x1009", 0)
+    data_dict["controller_load_curr"] = data_frame_dict.get("0x100C", 0)
     return data_dict
 
 
@@ -158,33 +214,35 @@ def search_device(command_code: int, addr: list, dev_addr=-1) -> dict:
     return rtn
 
 
-def serial_demo():
-    bytes_list = [0x05, 0x04, 0x10, 0x00, 0x00, 0x01, 0x34, 0xbd]
-    ser = serial.Serial(
-        port='/dev/ttyUSB0',
-        baudrate=BAUD_RATE,
-        bytesize=BYTE_SIZE,
-        parity=PARITY,
-        stopbits=STOP_BIT,
-        timeout=TIMEOUT,
-        write_timeout=WRITE_TIMEOUT)
-    ser.flushInput()
-    ser.flushOutput()
-    ser.write(bytes_list)
-    logging.debug(f"write data to '{ser.port}': {bytes_list}")
-    time.sleep(READ_TIME_SPOT)
-    recived_data = ser.read(7)
-    if len(recived_data) == 7:
-        logging.debug(f"recived_data: {byteslist_to_stringlist(recived_data)}")
+def controller_data_loop(ali_thing: aliyun_iot.AliThing, controller_interval: int):
+    global controller_data_dict
+    start_time = time.time()
+    while True:
+        now_stamp = time.time()
+        if int(now_stamp-start_time) % controller_interval == 0:
+            controller_data_dict = get_controller_data()
+            controller_data_dict.update(
+                {"processor_temp": get_system_temperature()})
+            ali_thing.post_property(controller_data_dict)
+        time.sleep(1)
+
+
+def start_controller_data_loop(ali_thing: aliyun_iot.AliThing, controller_interval: int):
+   # 启动controller loop
+    if load_controller_config():
+        controller_loop_thread = threading.Thread(
+            target=controller_data_loop, args=(ali_thing, controller_interval))
+        controller_loop_thread.setDaemon(True)
+        controller_loop_thread.start()
     else:
-        logging.error(f"recived_data: {byteslist_to_stringlist(recived_data)}")
-    pass
+        logging.critical(f"controller config 加载失败.")
+        sys.exit()
 
 
 if __name__ == "__main__":
-    recived_data = send_command('/dev/ttyUSB0', 0x6, GET_CONTROLLER_DATA_COMMAND,
-                                [0x10, 0x00], 29)
+    # recived_data = send_command('/dev/ttyUSB0', 0x6, GET_CONTROLLER_DATA_COMMAND,
+    # [0x10, 0x00], 29)
     # search_device(0x04, [0x10, 0x00])
-    dict = get_controller_data(recived_data)
-
+    # dict = get_controller_data(recived_data)
+    print(load_controller_config())
     pass
