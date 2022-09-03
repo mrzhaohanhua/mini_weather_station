@@ -74,7 +74,8 @@ def main(argv):
 
     ali_thing = aliyun_iot.load_ali_thing()  # 加载阿里云设备模型
     sensor_module.start_controller_data_loop(ali_thing, controller_interval)
-
+    time.sleep(20)
+    sensor_module.start_sensor_data_loop(ali_thing, sensor_interval)
     while True:
         time.sleep(10)
 
