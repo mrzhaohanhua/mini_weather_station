@@ -90,6 +90,7 @@ def load_sensor_config() -> bool:
         time.sleep(1)
     logging.error(
         f"sensor config file '{sensor_config_file_name}' is not valid.")
+    return False
 
 
 def get_port_list() -> list:
@@ -206,14 +207,22 @@ def get_controller_data() -> dict:
             0x1000+offset)] = byteslist_to_number(recived_data[3+offset*2:3+offset*2+2])
     data_dict = {}
     data_dict["controller_soft_ver"] = data_frame_dict.get("0x1000", "")
-    data_dict["controller_panel_volt"] = data_frame_dict.get("0x1001", 0)*0.1
-    data_dict["controller_batt_volt"] = data_frame_dict.get("0x1002", 0)*0.1
-    data_dict["controller_charge_curr"] = data_frame_dict.get("0x1005", 0)*0.1
-    data_dict["controller_charge_temp"] = data_frame_dict.get("0x1006", 0)
-    data_dict["controller_charge_power"] = data_frame_dict.get("0x1007", 0)*0.1
-    data_dict["controller_load_power"] = data_frame_dict.get("0x1008", 0)*0.1
-    data_dict["controller_batt"] = data_frame_dict.get("0x1009", 0)
-    data_dict["controller_load_curr"] = data_frame_dict.get("0x100C", 0)
+    data_dict["controller_panel_volt"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1001", 0)*0.1))
+    data_dict["controller_batt_volt"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1002", 0)*0.1))
+    data_dict["controller_charge_curr"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1005", 0)*0.1))
+    data_dict["controller_charge_temp"] =\
+        float('%0.2f' % (data_frame_dict.get("0x1006", 0)))
+    data_dict["controller_charge_power"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1007", 0)*0.1))
+    data_dict["controller_load_power"] =\
+        float('%0.2f' % (data_frame_dict.get("0x1008", 0)*0.1))
+    data_dict["controller_batt"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1009", 0)))
+    data_dict["controller_load_curr"] =\
+        float('%0.2f' % (data_frame_dict.get("0x100C", 0)))
     return data_dict
 
 
@@ -234,22 +243,31 @@ def get_controller_custom_data() -> dict:
         data_frame_dict['0x{:02X}'.format(
             0x1024+offset)] = byteslist_to_number(recived_data[3+offset*2:3+offset*2+2])
     data_dict = {}
-    data_dict["超压电压"] = data_frame_dict.get("0x1024", None)*0.1
-    data_dict["充电限制电压"] = data_frame_dict.get("0x1025", None)*0.1
-    data_dict["超压恢复电压"] = data_frame_dict.get("0x1026", None)*0.1
-    data_dict["均衡充电电压"] = data_frame_dict.get("0x1027", None)*0.1
-    data_dict["提升充电电"] = data_frame_dict.get("0x1028", None)*0.1
-    data_dict["提升充电返回电压"] = data_frame_dict.get("0x1029", None)*0.1*0.1
-    data_dict["浮充充电电压"] = data_frame_dict.get("0x102A", None)*0.1
-    data_dict["过放电压"] = data_frame_dict.get("0x102B", None)*0.1
-    data_dict["过放恢复电压"] = data_frame_dict.get("0x102C", None)*0.1
+    data_dict["超压电压"] =\
+        float('%0.2f' % ( data_frame_dict.get("0x1024", None)*0.1))
+    data_dict["充电限制电压"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1025", None)*0.1))
+    data_dict["超压恢复电压"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1026", None)*0.1))
+    data_dict["均衡充电电压"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1027", None)*0.1))
+    data_dict["提升充电电"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1028", None)*0.1))
+    data_dict["提升充电返回电压"] = \
+        float('%0.2f' % (data_frame_dict.get("0x1029", None)*0.1*0.1))
+    data_dict["浮充充电电压"] = \
+        float('%0.2f' % (data_frame_dict.get("0x102A", None)*0.1))
+    data_dict["过放电压"] = \
+        float('%0.2f' % (data_frame_dict.get("0x102B", None)*0.1))
+    data_dict["过放恢复电压"] = \
+        float('%0.2f' % (data_frame_dict.get("0x102C", None)*0.1))
     data_dict["电池欠压"] = data_frame_dict.get("0x102D", None)*0.1
     data_dict["均衡充电时间"] = data_frame_dict.get("0x102E", None)
     data_dict["提升充电时间"] = data_frame_dict.get("0x102F", None)
     data_dict["温度补偿系数"] = data_frame_dict.get("0x1030", None)
-    data_dict["设备地"] = data_frame_dict.get("0x1031", None)
-    data_dict["光控开启电"] = data_frame_dict.get("0x1032", None)
-    data_dict["光控关闭电"] = data_frame_dict.get("0x1033", None)
+    data_dict["设备地址"] = data_frame_dict.get("0x1031", None)
+    data_dict["光控开启电压"] = data_frame_dict.get("0x1032", None)
+    data_dict["光控关闭电压"] = data_frame_dict.get("0x1033", None)
     data_dict["光控开时段1"] = data_frame_dict.get("0x1034", None)
     data_dict["光控开时段2"] = data_frame_dict.get("0x1035", None)
     data_dict["户用和路灯模式"] = data_frame_dict.get("0x1036", None)
@@ -280,8 +298,10 @@ def get_sensor_data() -> dict:
         data_frame_dict['0x{:02X}'.format(
             0x0000+offset)] = byteslist_to_number(recived_data[3+offset*2:3+offset*2+2])
     data_dict = {}
-    data_dict["sensor_temperature"] = data_frame_dict.get("0x0000", 0)/100
-    data_dict["sensor_humidity"] = data_frame_dict.get("0x0000", 0)/100
+    data_dict["sensor_temperature"] = \
+        float('%0.2f' % (data_frame_dict.get("0x0000", 0)/100))
+    data_dict["sensor_humidity"] = \
+        float('%0.2f' % (data_frame_dict.get("0x0000", 0)/100))
     return data_dict
 
 
