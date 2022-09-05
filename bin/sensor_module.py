@@ -1,4 +1,5 @@
 from audioop import add
+from distutils.log import error
 import sys
 import os
 import json
@@ -201,10 +202,25 @@ def get_controller_data() -> dict:
     if len(recived_data) != 63:
         logging.warning("传递的controller数据字节列表不合法.")
         return {}
+    # 生成data_frame
     data_frame_dict = {}
     for offset in range(29):
         data_frame_dict['0x{:02X}'.format(
             0x1000+offset)] = byteslist_to_number(recived_data[3+offset*2:3+offset*2+2])
+    # 将data_frame写入文件
+    controller_data_file_name = "./data/controller_data.json"
+    controller_data = {}
+    try:
+        with open(controller_data_file_name, 'w', encoding='UTF-8') as controller_data_file:
+            controller_data["time"] = time.strftime(
+                "%Y-%m-%d %H:%M:%S", time.localtime())
+            controller_data.update(data_frame_dict)
+            json.dump(controller_data, controller_data_file,
+                      ensure_ascii=False, indent=2)
+    except:
+        logging.warning(
+            f"controller data file '{controller_data_file_name}' write fail.")
+
     data_dict = {}
     data_dict["controller_soft_ver"] = data_frame_dict.get("0x1000", "")
     data_dict["controller_panel_volt"] = \
@@ -223,6 +239,13 @@ def get_controller_data() -> dict:
         float('%0.2f' % (data_frame_dict.get("0x1009", 0)))
     data_dict["controller_load_curr"] =\
         float('%0.2f' % (data_frame_dict.get("0x100C", 0)))
+
+    # 处理控制器错误消息
+    error_messages = get_controller_error_messages(
+        data_frame_dict.get("0x1013", 0))
+    if len(error_messages) > 0:
+        logging.warning(f"controller report errors: {error_messages}")
+
     return data_dict
 
 
@@ -244,7 +267,7 @@ def get_controller_custom_data() -> dict:
             0x1024+offset)] = byteslist_to_number(recived_data[3+offset*2:3+offset*2+2])
     data_dict = {}
     data_dict["超压电压"] =\
-        float('%0.2f' % ( data_frame_dict.get("0x1024", None)*0.1))
+        float('%0.2f' % (data_frame_dict.get("0x1024", None)*0.1))
     data_dict["充电限制电压"] = \
         float('%0.2f' % (data_frame_dict.get("0x1025", None)*0.1))
     data_dict["超压恢复电压"] = \
@@ -279,6 +302,61 @@ def get_controller_custom_data() -> dict:
     data_dict["负载开/关机"] = data_frame_dict.get("0x103C", None)
 
     return data_dict
+
+
+def get_controller_error_messages(error_value: int) -> list:
+    # 读取错误代码
+    error_value = error_value & 0b1101111111111111  # 屏蔽第13位错误(蓄电池温度传感器失效)
+    error_messages_list = []
+    if error_value < 0xffff and error_value > 0:
+        if error_value % 2 == 1:
+            error_messages_list.append("蓄电池超压")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("蓄电池未接")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("光伏阵列过压")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("控制器短路")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("充电过流")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("控制器过热")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("蓄电池过热")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("输出过载")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("存储器读写错误")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("未知错误1")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("未知错误2")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("蓄电池欠压")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("控制器温度传感器失效")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("蓄电池温度传感器失效")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("光伏阵列欠压")
+        error_value = error_value//2
+        if error_value % 2 == 1:
+            error_messages_list.append("未知错误3")
+    return error_messages_list
 
 
 def get_sensor_data() -> dict:

@@ -66,16 +66,14 @@ def load_config():  # 读取配置文件
 
 def main(argv):
     global ali_thing
-    set_logging()
+    set_logging()  # 配置日志记录器
     # 配置参数
-    # sensor_interval: int  # 传感器读取时间间隔,秒
-    # controller_interval: int  # 控制器读取时间间隔,秒
-    load_config()
-
+    load_config()  # 加载程序配置
     ali_thing = aliyun_iot.load_ali_thing()  # 加载阿里云设备模型
-    sensor_module.start_controller_data_loop(ali_thing, controller_interval)
+    sensor_module.start_controller_data_loop(
+        ali_thing, controller_interval)  # 开始控制器循环
     time.sleep(15)
-    sensor_module.start_sensor_data_loop(ali_thing, sensor_interval)
+    sensor_module.start_sensor_data_loop(ali_thing, sensor_interval)  # 开启传感器循环
     while True:
         time.sleep(10)
 
