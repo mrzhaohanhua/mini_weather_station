@@ -132,4 +132,3 @@ dmypy.json
 .vscode/
 data/controller_data.json
 data/controller_custom_data.json
-data/controller_custom_data.json
