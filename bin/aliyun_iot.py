@@ -119,8 +119,8 @@ class AliThing(object):
                 logging.info("previous upload session is processing.")
                 time.sleep(1)
                 retry_times += 1
-            else:#property_upload_on_duty为False
-                property_upload_buffer.update(property_dict) #向buffer中增加数值
+            else:  # property_upload_on_duty为False
+                property_upload_buffer.update(property_dict)  # 向buffer中增加数值
                 break
 
     # def set_property(self, property_data: dict):
@@ -147,7 +147,10 @@ class AliThing(object):
                 # buffer中有数据，开始上传
                 property_upload_on_duty = True
                 logging.debug(f"Post data {property_upload_buffer}")
-                self.__linkkit.thing_post_property(property_upload_buffer)
+                try:
+                    self.__linkkit.thing_post_property(property_upload_buffer)
+                except linkkit.LinkKit.StateError:
+                    logging.error("ali_thing link state error.")
 
 
 def load_ali_thing() -> AliThing:
