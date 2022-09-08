@@ -8,9 +8,8 @@ import sensor_module
 
 
 def set_logging():
-    """
-    加载logging模块配置文件
-    """
+    #加载logging模块配置文件
+    
     log_config = {}
     log_config_file_name = "./data/log_config.json"
     try:
