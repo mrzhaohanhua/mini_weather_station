@@ -1,0 +1,13 @@
+[Unit]
+Description = Frp Client
+After = network.target syslog.target
+Wants = network.target
+
+[Service]
+Type = simple
+ExecStart = /bin/frpc -c /etc/frpc/frpc.ini
+Restart = on-failure
+RestartSec = 10s
+
+[Install]
+WantedBy = multi-user.target
