@@ -10,9 +10,10 @@ import serial.tools.list_ports
 import crc
 import threading
 import aliyun_iot
+from main import set_logging
 
 
-BAUD_RATE_LIST = [9600, 19200]
+BAUD_RATE_LIST = [9600]
 BAUD_RATE = 9600                # 串口速率
 BYTE_SIZE = 8                   # 串口字节大小
 PARITY = serial.PARITY_NONE     # 串口奇偶校验
@@ -105,6 +106,13 @@ def get_port_list() -> list:
 
 
 def send_command(port: str, dev_addr: int, command_code: int, addr: list, length: int, data_unit=DEFAULT_DATA_UNIT, baud_rate=BAUD_RATE, time_out=TIMEOUT) -> list:
+    # def send_command(
+    #         port: str,
+    #         dev_addr: int,
+    #         command_code,
+    #         data_addr: list,
+    #         data_length: int,
+    #         **args) -> list:
     # 发送指令，并接收返回的数据
     command_list = []
     try:
@@ -399,7 +407,7 @@ def search_device(command_code: int, addr: list, dev_addr=-1) -> dict:
                 else:
                     dev_addr_list = [dev_addr]
                 for dev_addr in dev_addr_list:
-                    for i in range(1, retry_times):
+                    for i in range(retry_times):
                         receive = send_command(
                             port, dev_addr, command_code, addr, 1, DEFAULT_DATA_UNIT, b_rate, 1)
                         if len(receive) > 0:
@@ -408,6 +416,7 @@ def search_device(command_code: int, addr: list, dev_addr=-1) -> dict:
                             logging.info(
                                 f"device '{'0x{:02X}'.format(dev_addr)}' found at port '{port}'")
                             return rtn
+                        time.sleep(1)
     return rtn
 
 
@@ -482,5 +491,19 @@ def start_sensor_data_loop(ali_thing: aliyun_iot.AliThing, sensor_interval: int)
 
 
 if __name__ == "__main__":
-    print(load_controller_config())
-    pass
+    set_logging()
+    retry_times = 3
+    ser_port = "/dev/ttyUSB0"
+    rtn = {}
+    for dev_addr in [0x66]:
+        for i in range(retry_times):
+            receive = send_command(ser_port, dev_addr, 0x03, [
+                                   0x00, 0x00], 1,baud_rate=9600, time_out=1)
+            if len(receive) > 0:
+                rtn["serial_port"] = ser_port
+                rtn["device_addr"] = dev_addr
+                logging.info(
+                    f"device '{'0x{:02X}'.format(dev_addr)}' found at port '{ser_port}'")
+                exit()
+            else:
+                time.sleep(1)

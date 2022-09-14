@@ -1,10 +1,4 @@
 #!/bin/sh
 
-#=============================================
-# System Required :
-# Description :
-# Author : Zhao Hanhua
-#=============================================
-
-#clear
-clear
+apt install python3 pip
+pip install pyserial aliyun_iot_linkkit
