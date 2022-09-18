@@ -1,0 +1,13 @@
+[Unit]
+Description = wvdial
+After = network.target syslog.target
+Wants = network.target
+
+[Service]
+Type = simple
+ExecStart = /bin/wvdial
+Restart = on-failure
+RestartSec = 10s
+
+[Install]
+WantedBy = multi-user.target

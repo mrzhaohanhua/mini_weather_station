@@ -10,7 +10,7 @@ import serial.tools.list_ports
 import crc
 import threading
 import aliyun_iot
-from main import set_logging
+# from main import set_logging
 
 
 BAUD_RATE_LIST = [9600]
@@ -213,7 +213,7 @@ def get_controller_data() -> dict:
     # 生成data_frame
     data_frame_dict = {}
     for offset in range(29):
-        data_frame_dict['0x{:02X}'.format(
+        data_frame_dict['0x{:04X}'.format(
             0x1000+offset)] = byteslist_to_number(recived_data[3+offset*2:3+offset*2+2])
     # 将data_frame写入文件
     controller_data_file_name = "./data/controller_data.json"
@@ -368,8 +368,8 @@ def get_controller_error_messages(error_value: int) -> list:
 
 
 def get_sensor_data() -> dict:
-    port = sensor_config("serial_port", "")
-    dev_addr = controller_config.get("device_addr", -1)
+    port = sensor_config.get("serial_port", "")
+    dev_addr = sensor_config.get("device_addr", -1)
     for n in range(3):
         recived_data = send_command(
             port, dev_addr, GET_SENSOR_DATA_COMMAND, [0x00, 0x00], 3)
@@ -381,13 +381,15 @@ def get_sensor_data() -> dict:
     # 将bytes list 转为控制器数据字典
     data_frame_dict = {}
     for offset in range(3):
-        data_frame_dict['0x{:02X}'.format(
+        data_frame_dict['0x{:04X}'.format(
             0x0000+offset)] = byteslist_to_number(recived_data[3+offset*2:3+offset*2+2])
     data_dict = {}
     data_dict["sensor_temperature"] = \
         float('%0.2f' % (data_frame_dict.get("0x0000", 0)/100))
     data_dict["sensor_humidity"] = \
-        float('%0.2f' % (data_frame_dict.get("0x0000", 0)/100))
+        float('%0.2f' % (data_frame_dict.get("0x0001", 0)/100))
+    data_dict["sensor_atmosphere"]= \
+        float('%0.2f' % (data_frame_dict.get("0x0002",0)/100))
     return data_dict
 
 
